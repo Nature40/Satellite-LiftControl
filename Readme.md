@@ -23,3 +23,8 @@ The Motor Control Protocol (MCP) is a lightweight UDP-based protocol to enable t
 The UDP payload consists of an ASCII-encoded number in the range of [-1024, 1024]. 
 
 When a command is received, the ESP runs the motor until a preconfigured timeout happens (usually <1s). When a command is received before the timeout happens, the new command is taken and the timeout is resetted.
+
+
+## References
+
+- [How to Use L298N Motor Driver](https://www.teachmemicro.com/use-l298n-motor-driver/)
