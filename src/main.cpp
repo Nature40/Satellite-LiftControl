@@ -1,15 +1,13 @@
-#include <Arduino.h>
-
 #include <WiFi.h>
-#include <WiFiClient.h>
-#include <WiFiAP.h>
-#include <WiFiUdp.h>
 
 const char *ssid = "foobar";
 const char *pass = "supersicher";
+const int   port = 35037;
 
 WiFiServer server;
 WiFiUDP udp;
+
+char buff[64];
 
 void setup() {
   Serial.begin(115200);
@@ -22,23 +20,20 @@ void setup() {
   Serial.print(WiFi.softAPIP());
   Serial.print("\n");
 
-  if (udp.begin(WiFi.softAPIP(), 2323) == 0) {
-    Serial.println("udp begin failed");
+  if (!udp.begin(WiFi.softAPIP(), port)) {
+    Serial.println("Failed to start UDP server");
     while (1);
-  }
-
-  while (1) {
-    char buff[128];
-    int len = udp.parsePacket();
-
-    if (len == 0) {
-      continue;
-    }
-
-    udp.read(buff, len);
-    Serial.println(buff);
   }
 }
 
 void loop() {
+  int len = udp.parsePacket();
+  if (len == 0) {
+    return;
+  }
+
+  udp.read(buff, len);
+  int cmdData = atoi(buff);
+
+  Serial.println(cmdData);
 }
