@@ -6,3 +6,7 @@ The LiftControl Satellite has one job: offering an API via WiFi to control the m
 
 ![L298N Motor Controller Pinout](l298n-pinout.png)
 
+
+## References
+
+- [How to Use L298N Motor Driver](https://www.teachmemicro.com/use-l298n-motor-driver/)
