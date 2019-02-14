@@ -14,7 +14,7 @@ const int chan = 0;
 const int resolution = 8;
 
 // Network configuration
-char ssid [30];
+char ssid[30];
 const char *pass = "supersicher";
 const int port = 35037;
 
@@ -30,10 +30,10 @@ void setup() {
 
     // read chip id
     uint64_t chipid = ESP.getEfuseMac();
-    Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid>>32));
+    Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid >> 32));
 
     // setup WiFi access point
-    snprintf(ssid, 30, "LiftSystem %04x", (uint16_t)(chipid>>32));
+    snprintf(ssid, 30, "LiftSystem %04x", (uint16_t)(chipid >> 32));
     WiFi.softAP(ssid, pass);
     server.begin();
 
@@ -95,7 +95,7 @@ int setSpeed(int speed) {
     return speed;
 }
 
-void handlePacket() {
+bool handlePacket() {
     int packetSize = udp.parsePacket();
     if (packetSize) {
         remoteIP = udp.remoteIP();
@@ -105,19 +105,26 @@ void handlePacket() {
         size_t payload_len = udp.read(buffer, MAX_UDP_SIZE);
         buffer[payload_len] = 0;
 
-        Serial.printf("Received %i bytes from %s:%i: '%s'\n", payload_len, remoteIP.toString().c_str(), remotePort, buffer);
+        Serial.printf("Received %i bytes from %s:%i: '%s'\n", payload_len,
+                      remoteIP.toString().c_str(), remotePort, buffer);
 
         int speedCmd = atoi(buffer);
         setSpeed(speedCmd);
     }
+
+    return packetSize > 0;
 }
 
 void loop() {
-    handlePacket();
+    bool packet = handlePacket();
 
     if (timeout < millis() && ledcRead(chan) != 0) {
         setSpeed(0);
     }
 
-    delay(10);
+    if (packet) {
+        return;
+    } else {
+        delay(10);
+    }
 }
