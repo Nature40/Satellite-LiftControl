@@ -17,6 +17,9 @@ const int resolution = 8;
 char ssid[30];
 const char *pass = "supersicher";
 const int port = 35037;
+const IPAddress ip = IPAddress(192, 168, 4, 254);
+const IPAddress gateway = IPAddress(192, 168, 4, 254);
+const IPAddress subnet = IPAddress(255, 255, 255, 0);
 
 WiFiServer server;
 WiFiUDP udp;
@@ -35,6 +38,7 @@ void setup() {
     // setup WiFi access point
     snprintf(ssid, 30, "nature40.liftsystem.%04x", (uint16_t)(chipid >> 32));
     WiFi.softAP(ssid, pass);
+    WiFi.softAPConfig(ip, gateway, subnet);
     server.begin();
 
     // start udp server
