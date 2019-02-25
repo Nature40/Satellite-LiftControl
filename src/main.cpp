@@ -33,7 +33,7 @@ void setup() {
     Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid >> 32));
 
     // setup WiFi access point
-    snprintf(ssid, 30, "LiftSystem %04x", (uint16_t)(chipid >> 32));
+    snprintf(ssid, 30, "nature40.liftsystem.%04x", (uint16_t)(chipid >> 32));
     WiFi.softAP(ssid, pass);
     server.begin();
 
