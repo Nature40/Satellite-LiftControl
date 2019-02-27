@@ -22,9 +22,9 @@ const IPAddress gateway = IPAddress(192, 168, 4, 254);
 const IPAddress subnet = IPAddress(255, 255, 255, 0);
 
 WiFiServer server;
-WiFiUDP udp;
+WiFiClient client;
 
-#define MAX_UDP_SIZE 512
+#define MAX_CMD_SIZE 512
 
 void setup() {
     // setup serial console output
@@ -39,15 +39,7 @@ void setup() {
     snprintf(ssid, 30, "nature40.liftsystem.%04x", (uint16_t)(chipid >> 32));
     WiFi.softAP(ssid, pass);
     WiFi.softAPConfig(ip, gateway, subnet);
-    server.begin();
-
-    // start udp server
-    if (!udp.begin(WiFi.softAPIP(), port)) {
-        Serial.println("Error: Failed to start UDP server");
-        while (true) {
-            delay(1000);
-        }
-    }
+    server.begin(port);
 
     // print configuration
     Serial.printf("SSID: %s\n", ssid);
@@ -89,38 +81,48 @@ int setSpeed(int speed) {
     digitalWrite(IN2, (speed > 0));
 
     // send packet to last controller
-    char buffer[MAX_UDP_SIZE];
-    int payload_len = snprintf(buffer, MAX_UDP_SIZE, "set %i\n", speed);
+    char buffer[MAX_CMD_SIZE];
+    int cmd_len = snprintf(buffer, MAX_CMD_SIZE, "set %i\n", speed);
 
-    udp.beginPacket(remoteIP, remotePort);
-    udp.write((const uint8_t *)buffer, payload_len);
-    udp.endPacket();
+    client.write_P(buffer, cmd_len);
 
     return speed;
 }
 
-bool handlePacket() {
-    int packetSize = udp.parsePacket();
-    if (packetSize) {
-        remoteIP = udp.remoteIP();
-        remotePort = udp.remotePort();
+bool handleCommand() {
+    if (!client.available())
+        return false;
 
-        char buffer[MAX_UDP_SIZE];
-        size_t payload_len = udp.read(buffer, MAX_UDP_SIZE);
-        buffer[payload_len] = 0;
+    char buffer[MAX_CMD_SIZE];
+    size_t cmd_len = client.readBytesUntil('\n', buffer, MAX_CMD_SIZE);
+    buffer[cmd_len] = '\0';
 
-        Serial.printf("Received %i bytes from %s:%i: '%s'\n", payload_len,
-                      remoteIP.toString().c_str(), remotePort, buffer);
+    Serial.printf("Received %i bytes from %s: '%s'\n", cmd_len,
+                  client.remoteIP().toString().c_str(), buffer);
 
-        int speedCmd = atoi(buffer);
-        setSpeed(speedCmd);
-    }
+    int speedCmd = atoi(buffer);
+    setSpeed(speedCmd);
 
-    return packetSize > 0;
+    return true;
+}
+
+uint8_t checkClient() {
+    if (!client)
+        client = server.available();
+
+    if (!client.connected())
+        client = server.available();
+
+    return client.connected();
 }
 
 void loop() {
-    bool packet = handlePacket();
+    bool packet = false;
+
+    // if a client is connected
+    if (checkClient()) {
+        packet = handleCommand();
+    }
 
     if (timeout < millis() && ledcRead(chan) != 0) {
         setSpeed(0);
