@@ -17,8 +17,8 @@ const int resolution = 8;
 char ssid[30];
 const char *pass = "supersicher";
 const int port = 35037;
-const IPAddress ip = IPAddress(192, 168, 4, 254);
-const IPAddress gateway = IPAddress(192, 168, 4, 254);
+const IPAddress ip = IPAddress(192, 168, 3, 254);
+const IPAddress gateway = IPAddress(192, 168, 3, 254);
 const IPAddress subnet = IPAddress(255, 255, 255, 0);
 
 WiFiServer server;
