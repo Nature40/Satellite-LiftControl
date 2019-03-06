@@ -6,7 +6,7 @@
 #define IN2 12
 
 // motor timeout (security fallback)
-#define TIMEOUT_DELAY_MS 500
+int timeout_ms = 500;
 
 // PWM motor configuration
 const int freq = 255;
@@ -24,7 +24,8 @@ const IPAddress subnet = IPAddress(255, 255, 255, 0);
 WiFiServer server;
 WiFiUDP udp;
 
-#define MAX_UDP_SIZE 512
+#define MAX_UDP_SIZE 65536
+char buffer[MAX_UDP_SIZE];
 
 void setup() {
     // setup serial console output
@@ -74,14 +75,29 @@ int timeout = 0;
 IPAddress remoteIP(0, 0, 0, 0);
 uint16_t remotePort = 0;
 
-int setSpeed(int speed) {
+void sendResponse(int payload_len) {
+    udp.beginPacket(remoteIP, remotePort);
+    udp.write((const uint8_t *)buffer, payload_len);
+    udp.endPacket();
+}
+
+void setTimeout(int new_timeout_ms) {
+    Serial.printf("Setting timeout_ms to %i\n", new_timeout_ms);
+    timeout_ms = new_timeout_ms;
+
+    int payload_len =
+        snprintf(buffer, MAX_UDP_SIZE, "timeout %i\n", new_timeout_ms);
+    sendResponse(payload_len);
+}
+
+void setSpeed(int speed) {
     if (speed > 255)
         speed = 255;
     if (speed < -255)
         speed = -255;
 
     Serial.printf("Setting speed to %i\n", speed);
-    timeout = millis() + TIMEOUT_DELAY_MS;
+    timeout = millis() + timeout_ms;
 
     ledcWrite(chan, abs(speed));
 
@@ -89,14 +105,36 @@ int setSpeed(int speed) {
     digitalWrite(IN2, (speed > 0));
 
     // send packet to last controller
-    char buffer[MAX_UDP_SIZE];
     int payload_len = snprintf(buffer, MAX_UDP_SIZE, "set %i\n", speed);
+    sendResponse(payload_len);
+}
 
-    udp.beginPacket(remoteIP, remotePort);
-    udp.write((const uint8_t *)buffer, payload_len);
-    udp.endPacket();
+void parsePacket() {
+    char *cmd = strtok(buffer, " ");
+    if (cmd == NULL) {
+        Serial.printf("Error: empty command\n");
+        return;
+    }
 
-    return speed;
+    char *arg1 = strtok(NULL, " ");
+
+    if (!strcmp(cmd, "speed")) {
+        if (arg1 == NULL) {
+            Serial.printf("Error: argument <speed> missing\n");
+        } else {
+            int speed = atoi(arg1);
+            setSpeed(speed);
+        }
+    } else if (!strcmp(cmd, "timeout")) {
+        if (arg1 == NULL) {
+            Serial.printf("Error: argument <ms> missing\n");
+        } else {
+            int new_timeout_ms = atoi(arg1);
+            setTimeout(new_timeout_ms);
+        }
+    } else {
+        Serial.printf("Command '%s' is unknown, skipping\n", cmd);
+    }
 }
 
 bool handlePacket() {
@@ -105,18 +143,16 @@ bool handlePacket() {
         remoteIP = udp.remoteIP();
         remotePort = udp.remotePort();
 
-        char buffer[MAX_UDP_SIZE];
         size_t payload_len = udp.read(buffer, MAX_UDP_SIZE);
         buffer[payload_len] = 0;
 
         Serial.printf("Received %i bytes from %s:%i: '%s'\n", payload_len,
                       remoteIP.toString().c_str(), remotePort, buffer);
 
-        int speedCmd = atoi(buffer);
-        setSpeed(speedCmd);
+        parsePacket();
     }
 
-    return packetSize > 0;
+    return (packetSize > 0);
 }
 
 void loop() {
