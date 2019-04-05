@@ -99,7 +99,10 @@ void setSpeed(int speed) {
     Serial.printf("Setting speed to %i\n", speed);
     timeout = millis() + timeout_ms;
 
-    ledcWrite(chan, abs(speed));
+    if (speed == 0)
+        ledcWrite(chan, 255);
+    else
+        ledcWrite(chan, abs(speed));
 
     digitalWrite(IN1, (speed < 0));
     digitalWrite(IN2, (speed > 0));
