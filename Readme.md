@@ -1,4 +1,4 @@
-# Nature 4.0: LiftControl Satellite
+# Nature 4.0: LiftSystem Satellite
 
 The LiftControl Satellite has one job: offering an API via WiFi to control the motor for the lift, connected via an L298N motor control unit.
 
@@ -20,10 +20,13 @@ The each motor is controlled through three logical pins:
  
 The Motor Control Protocol (MCP) is a lightweight UDP-based protocol to enable the motor to be controlled via WiFi. A timeout needs to be configured on initializing the software.
 
-The UDP payload consists of an ASCII-encoded number in the range of [-1024, 1024]. 
+The UDP payload consists of an ASCII-encoded number in the range of [-255, 255]. 
 
 When a command is received, the ESP runs the motor until a preconfigured timeout happens (usually <1s). When a command is received before the timeout happens, the new command is taken and the timeout is resetted.
 
+## Box Assembly
+
+![Assembled Box](liftsystem-assembly.jpg)
 
 ## References
 
