@@ -30,51 +30,6 @@ WiFiUDP udp;
 #define MAX_UDP_SIZE 65536
 char buffer[MAX_UDP_SIZE];
 
-void setup() {
-    // setup serial console output
-    Serial.begin(115200);
-    Serial.setDebugOutput(true);
-
-    // read chip id
-    uint64_t chipid = ESP.getEfuseMac();
-    Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid >> 32));
-
-    // setup WiFi access point
-    snprintf(ssid, 30, "nature40.liftsystem.%04x", (uint16_t)(chipid >> 32));
-    WiFi.softAP(ssid, pass);
-    WiFi.softAPConfig(ip, gateway, subnet);
-    server.begin();
-
-    // start udp server
-    if (!udp.begin(WiFi.softAPIP(), port)) {
-        Serial.println("Error: Failed to start UDP server");
-        while (true) {
-            delay(1000);
-        }
-    }
-
-    // print configuration
-    Serial.printf("SSID: %s\n", ssid);
-    Serial.printf("Password: %s\n", pass);
-    Serial.printf("IP: %s\n", WiFi.softAPIP().toString().c_str());
-    Serial.printf("Port: %i\n", port);
-
-    // setup manual control buttons
-    pinMode(BUTTON_DOWN, INPUT);
-    pinMode(BUTTON_UP, INPUT);
-
-    // setup motor control pins
-    pinMode(EN_A, OUTPUT);
-    pinMode(IN1, OUTPUT);
-    pinMode(IN2, OUTPUT);
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
-
-    // setup PWM channel
-    ledcSetup(chan, freq, resolution);
-    ledcAttachPin(EN_A, chan);
-}
-
 // timeout for motor command
 int timeout = 0;
 
@@ -185,6 +140,52 @@ bool handleButtons() {
     }
 
     return false;
+}
+
+void setup() {
+    // setup serial console output
+    Serial.begin(115200);
+    Serial.setDebugOutput(true);
+
+    // read chip id
+    uint64_t chipid = ESP.getEfuseMac();
+    Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid >> 32));
+
+    // setup WiFi access point
+    snprintf(ssid, 30, "nature40.liftsystem.%04x", (uint16_t)(chipid >> 32));
+    WiFi.softAP(ssid, pass);
+    WiFi.softAPConfig(ip, gateway, subnet);
+    server.begin();
+
+    // start udp server
+    if (!udp.begin(WiFi.softAPIP(), port)) {
+        Serial.println("Error: Failed to start UDP server");
+        while (true) {
+            delay(1000);
+        }
+    }
+
+    // print configuration
+    Serial.printf("SSID: %s\n", ssid);
+    Serial.printf("Password: %s\n", pass);
+    Serial.printf("IP: %s\n", WiFi.softAPIP().toString().c_str());
+    Serial.printf("Port: %i\n", port);
+
+    // setup manual control buttons
+    pinMode(BUTTON_DOWN, INPUT);
+    pinMode(BUTTON_UP, INPUT);
+
+    // setup motor control pins
+    pinMode(EN_A, OUTPUT);
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+
+    // setup PWM channel
+    ledcSetup(chan, freq, resolution);
+    ledcAttachPin(EN_A, chan);
+
+    // set initial break
+    setSpeed(0);
 }
 
 void loop() {
