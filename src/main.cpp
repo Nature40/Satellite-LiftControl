@@ -5,6 +5,9 @@
 #define IN1 13
 #define IN2 12
 
+#define BUTTON_DOWN 32
+#define BUTTON_UP 33
+
 // motor timeout (security fallback)
 int timeout_ms = 500;
 
@@ -55,6 +58,10 @@ void setup() {
     Serial.printf("Password: %s\n", pass);
     Serial.printf("IP: %s\n", WiFi.softAPIP().toString().c_str());
     Serial.printf("Port: %i\n", port);
+
+    // setup manual control buttons
+    pinMode(BUTTON_DOWN, INPUT);
+    pinMode(BUTTON_UP, INPUT);
 
     // setup motor control pins
     pinMode(EN_A, OUTPUT);
@@ -158,14 +165,41 @@ bool handlePacket() {
     return (packetSize > 0);
 }
 
+bool handleButtons() {
+    if (digitalRead(BUTTON_UP) && digitalRead(BUTTON_DOWN)) {
+        Serial.println("Both buttons pressed, stopping lift.");
+        setSpeed(0);
+        return true;
+    }
+
+    if (digitalRead(BUTTON_UP)) {
+        Serial.println("Button up pressed.");
+        setSpeed(255);
+        return true;
+    }
+
+    if (digitalRead(BUTTON_DOWN)) {
+        Serial.println("Button down pressed.");
+        setSpeed(-255);
+        return true;
+    }
+
+    return false;
+}
+
 void loop() {
-    bool packet = handlePacket();
+    bool button_pressed = handleButtons();
+    bool packet_received = false;
+
+    if (!button_pressed) {
+        packet_received = handlePacket();
+    }
 
     if (timeout < millis() && (digitalRead(IN1) || digitalRead(IN2))) {
         setSpeed(0);
     }
 
-    if (packet) {
+    if (packet_received) {
         return;
     } else {
         delay(10);
