@@ -161,7 +161,7 @@ bool handlePacket() {
 void loop() {
     bool packet = handlePacket();
 
-    if (timeout < millis() && ledcRead(chan) != 0) {
+    if (timeout < millis() && (digitalRead(IN1) || digitalRead(IN2))) {
         setSpeed(0);
     }
 
