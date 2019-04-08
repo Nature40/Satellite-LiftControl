@@ -1,5 +1,7 @@
 # Nature 4.0: LiftSystem Satellite
 
+[![Build Status](https://travis-ci.org/Nature40/Satellite-LiftSystem.svg?branch=master)](https://travis-ci.org/Nature40/Satellite-LiftSystem)
+
 The LiftControl Satellite has one job: offering an API via WiFi to control the motor for the lift, connected via an L298N motor control unit.
 
 
