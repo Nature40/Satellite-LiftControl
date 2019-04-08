@@ -104,6 +104,11 @@ void parsePacket() {
 
 bool handlePacket() {
     int packetSize = udp.parsePacket();
+
+    // sometimes udp.parsePacket() gets stuck in a loop, a reboot helps here.
+    if (errno == 5)
+        ESP.restart();
+
     if (packetSize) {
         remoteIP = udp.remoteIP();
         remotePort = udp.remotePort();
