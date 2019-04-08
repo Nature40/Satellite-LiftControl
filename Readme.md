@@ -18,6 +18,21 @@ timeout <ms>      : sets internal timeout for issued commands (default: 500 ms)
 
 When a command is received, the ESP runs the motor until a the timeout happens. New speed command overwrite old speed commands and also restart the timeout.
 
+### Minimal client
+
+A minimal client in bash could look like this:
+```bash
+while true; do
+    echo "speed 255"
+    sleep 0.05
+done | nc -u 192.168.3.254 35037
+```
+
+One line:
+```bash
+while true; do echo "speed 255"; sleep 0.05; done | nc -u 192.168.3.254 35037
+```
+
 ## Box Assembly
 
 The final box consists of:
