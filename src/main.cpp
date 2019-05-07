@@ -53,6 +53,7 @@ void setTimeout(int new_timeout_ms) {
 }
 
 void setSpeed(int speed) {
+    // cutoff extreme values
     if (speed > 255)
         speed = 255;
     if (speed < -255)
@@ -61,11 +62,13 @@ void setSpeed(int speed) {
     Serial.printf("Setting speed to %i\n", speed);
     timeout = millis() + timeout_ms;
 
+    // write 255 if standing still or pwm value
     if (speed == 0)
         ledcWrite(chan, 255);
     else
         ledcWrite(chan, abs(speed));
 
+    // write direction (double zero to break)
     digitalWrite(IN1, (speed < 0));
     digitalWrite(IN2, (speed > 0));
 
@@ -75,6 +78,7 @@ void setSpeed(int speed) {
 }
 
 void parsePacket() {
+    // separate cmd string
     char *cmd = strtok(buffer, " ");
     if (cmd == NULL) {
         Serial.printf("Error: empty command\n");
@@ -157,7 +161,7 @@ void setup() {
     Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid >> 32));
 
     // setup WiFi access point
-    snprintf(ssid, 30, "nature40.liftsystem.%04x", (uint16_t)(chipid >> 32));
+    snprintf(ssid, 30, "nature40-liftsystem-%04x", (uint16_t)(chipid >> 32));
     WiFi.softAP(ssid, pass);
     WiFi.softAPConfig(ip, gateway, subnet);
     server.begin();
@@ -206,6 +210,7 @@ void loop() {
         setSpeed(0);
     }
 
+    // if a packet is received, check for the next, else sleep.
     if (packet_received) {
         return;
     } else {
