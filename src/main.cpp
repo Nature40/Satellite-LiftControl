@@ -201,7 +201,8 @@ void loop() {
         packet_received = handlePacket();
     }
 
-    if (timeout < millis() && (digitalRead(IN1) || digitalRead(IN2))) {
+    // if a timeout occures and the lift moves
+    if ((timeout < millis()) && (digitalRead(IN1) || digitalRead(IN2))) {
         setSpeed(0);
     }
 
