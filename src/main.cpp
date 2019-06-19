@@ -1,4 +1,7 @@
+
+#include <SSD1306.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 
 // connections to L298N
 #define EN_A 21
@@ -37,6 +40,16 @@ int timeout = 0;
 IPAddress remoteIP(0, 0, 0, 0);
 uint16_t remotePort = 0;
 
+// display configuration
+#define OLED_ADDRESS 0x3c
+#define OLED_SDA 4
+#define OLED_SCL 15
+#define OLED_RST 16
+SSD1306 display(OLED_ADDRESS, OLED_SDA, OLED_SCL);
+
+int display_speed = 0;
+int display_redraw = 0;
+
 void sendResponse(int payload_len) {
     udp.beginPacket(remoteIP, remotePort);
     udp.write((const uint8_t *)buffer, payload_len);
@@ -52,7 +65,7 @@ void setTimeout(int new_timeout_ms) {
     sendResponse(payload_len);
 }
 
-void setSpeed(int speed) {
+void setSpeed(int speed, int timeout_ms) {
     // cutoff extreme values
     if (speed > 255)
         speed = 255;
@@ -60,6 +73,7 @@ void setSpeed(int speed) {
         speed = -255;
 
     Serial.printf("Setting speed to %i\n", speed);
+    display_speed = speed;
     timeout = millis() + timeout_ms;
 
     // write 255 if standing still or pwm value
@@ -92,7 +106,7 @@ void parsePacket() {
             Serial.printf("Error: argument <speed> missing\n");
         } else {
             int speed = atoi(arg1);
-            setSpeed(speed);
+            setSpeed(speed, timeout_ms);
         }
     } else if (!strcmp(cmd, "timeout")) {
         if (arg1 == NULL) {
@@ -132,23 +146,54 @@ bool handlePacket() {
 bool handleButtons() {
     if (digitalRead(BUTTON_UP) && digitalRead(BUTTON_DOWN)) {
         Serial.println("Both buttons pressed, stopping lift.");
-        setSpeed(0);
+        setSpeed(0, 0);
         return true;
     }
 
     if (digitalRead(BUTTON_UP)) {
         Serial.println("Button up pressed.");
-        setSpeed(255);
+        setSpeed(255, 0);
         return true;
     }
 
     if (digitalRead(BUTTON_DOWN)) {
         Serial.println("Button down pressed.");
-        setSpeed(-255);
+        setSpeed(-255, 0);
         return true;
     }
 
     return false;
+}
+
+void redraw() {
+    // get station count
+    wifi_sta_list_t stations;
+    esp_wifi_ap_get_sta_list(&stations);
+    char stations_str[16];
+    char speed_str[16];
+    char timeout_str[16];
+    snprintf(stations_str, 16, "%i", stations.num);
+    snprintf(speed_str, 16, "%i", display_speed);
+    double timeout_s = ((double)millis() - (double)timeout) / 1000;
+    snprintf(timeout_str, 16, "%.1f", timeout_s);
+
+    display.clear();
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    display.setFont(ArialMT_Plain_24);
+    display.drawString(0, 0, ssid + 20);
+
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 24, "WiFi Stations");
+    display.drawString(0, 36, "Speed");
+    display.drawString(0, 48, "Last Movement");
+
+    display.setTextAlignment(TEXT_ALIGN_RIGHT);
+    display.drawString(128, 24, stations_str);
+    display.drawString(128, 36, speed_str);
+    display.drawString(128, 48, timeout_str);
+    display.display();
+
+    display_redraw = millis() + 100;
 }
 
 void setup() {
@@ -159,9 +204,20 @@ void setup() {
     // read chip id
     uint64_t chipid = ESP.getEfuseMac();
     Serial.printf("ESP32 Chip ID: %04x\n", (uint16_t)(chipid >> 32));
+    snprintf(ssid, 30, "nature40-liftsystem-%04x", (uint16_t)(chipid >> 32));
+
+    // Reset OLED
+    pinMode(OLED_RST, OUTPUT);
+    digitalWrite(OLED_RST, LOW);
+    delay(50);
+    digitalWrite(OLED_RST, HIGH);
+
+    // Init OLED
+    display.init();
+    redraw();
+    Serial.println("OLED display initialised.");
 
     // setup WiFi access point
-    snprintf(ssid, 30, "nature40-liftsystem-%04x", (uint16_t)(chipid >> 32));
     WiFi.softAP(ssid, pass);
     WiFi.softAPConfig(ip, gateway, subnet);
     server.begin();
@@ -194,7 +250,7 @@ void setup() {
     ledcAttachPin(EN_A, chan);
 
     // set initial break
-    setSpeed(0);
+    setSpeed(0, timeout_ms);
 }
 
 void loop() {
@@ -207,7 +263,11 @@ void loop() {
 
     // if a timeout occures and the lift moves
     if ((timeout < millis()) && (digitalRead(IN1) || digitalRead(IN2))) {
-        setSpeed(0);
+        setSpeed(0, 0);
+    }
+
+    if (display_redraw < millis()) {
+        redraw();
     }
 
     // if a packet is received, check for the next, else sleep.
