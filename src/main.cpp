@@ -178,6 +178,7 @@ void redraw() {
     snprintf(timeout_str, 16, "%.1f", timeout_s);
 
     display.clear();
+    display.flipScreenVertically();
     display.setTextAlignment(TEXT_ALIGN_LEFT);
     display.setFont(ArialMT_Plain_24);
     display.drawString(0, 0, ssid + 20);
