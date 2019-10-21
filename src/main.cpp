@@ -72,6 +72,8 @@ void setSpeed(int speed, int timeout_ms) {
     if (speed < -255)
         speed = -255;
 
+    bool send_response = (display_speed != speed);
+
     Serial.printf("Setting speed to %i\n", speed);
     display_speed = speed;
     timeout = millis() + timeout_ms;
@@ -86,9 +88,11 @@ void setSpeed(int speed, int timeout_ms) {
     digitalWrite(IN1, (speed < 0));
     digitalWrite(IN2, (speed > 0));
 
-    // send packet to last controller
-    int payload_len = snprintf(buffer, MAX_UDP_SIZE, "set %i\n", speed);
-    sendResponse(payload_len);
+    // send packet to last controller, if changed
+    if (send_response) {
+        int payload_len = snprintf(buffer, MAX_UDP_SIZE, "speed %i\n", speed);
+        sendResponse(payload_len);
+    }
 }
 
 void parsePacket() {
@@ -146,19 +150,19 @@ bool handlePacket() {
 bool handleButtons() {
     if (digitalRead(BUTTON_UP) && digitalRead(BUTTON_DOWN)) {
         Serial.println("Both buttons pressed, stopping lift.");
-        setSpeed(0, 0);
+        setSpeed(0, 10);
         return true;
     }
 
     if (digitalRead(BUTTON_UP)) {
         Serial.println("Button up pressed.");
-        setSpeed(255, 0);
+        setSpeed(255, 10);
         return true;
     }
 
     if (digitalRead(BUTTON_DOWN)) {
         Serial.println("Button down pressed.");
-        setSpeed(-255, 0);
+        setSpeed(-255, 10);
         return true;
     }
 
@@ -219,7 +223,7 @@ void setup() {
     Serial.println("OLED display initialised.");
 
     // setup WiFi access point
-    WiFi.softAP(ssid, pass);
+    WiFi.softAP(ssid, pass, 11, false, 2);
     WiFi.softAPConfig(ip, gateway, subnet);
     server.begin();
 
